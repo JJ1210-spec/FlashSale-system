@@ -1,0 +1,10 @@
+* { box-sizing: border-box; }
+body { margin: 0; padding: 24px; background: #f5f6f8; color: #20242c; font-family: Arial, sans-serif; }
+main { max-width: 420px; margin: 12vh auto 0; padding: 32px; background: white; border: 1px solid #e2e5e9; border-radius: 12px; }
+h1 { margin: 0 0 12px; font-size: 28px; }
+p { line-height: 1.5; }
+.availability { margin: 28px 0; font-size: 18px; }
+button { width: 100%; padding: 13px; border: 0; border-radius: 8px; background: #2456d3; color: white; font: inherit; font-weight: bold; cursor: pointer; }
+button:disabled { background: #aab4c8; cursor: default; }
+#message { min-height: 24px; margin: 22px 0 0; font-weight: bold; }
+.note { margin-bottom: 0; color: #667080; font-size: 13px; }

@@ -1,0 +1,79 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sale
+      POSTGRES_PASSWORD: sale_dev_password
+      POSTGRES_DB: sale
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sale -d sale"]
+      interval: 3s
+      retries: 20
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      retries: 20
+    volumes:
+      - redisdata:/data
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      retries: 20
+  setup:
+    build: .
+    command: node src/setup.js
+    environment: &app_env
+      DATABASE_URL: postgres://sale:sale_dev_password@postgres:5432/sale
+      REDIS_URL: redis://redis:6379
+      AMQP_URL: amqp://rabbitmq:5672
+      SALE_STOCK: 500
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+  api1: &api_service
+    build: .
+    command: node src/api.js
+    environment: *app_env
+    depends_on:
+      setup: { condition: service_completed_successfully }
+    ports:
+      - "127.0.0.1:3000:3000"
+  api2:
+    <<: *api_service
+    ports: []
+  publisher:
+    build: .
+    command: node src/publisher.js
+    restart: unless-stopped
+    environment: *app_env
+    depends_on:
+      setup: { condition: service_completed_successfully }
+      rabbitmq: { condition: service_healthy }
+  worker:
+    build: .
+    command: node src/worker.js
+    restart: unless-stopped
+    environment: *app_env
+    depends_on:
+      setup: { condition: service_completed_successfully }
+      rabbitmq: { condition: service_healthy }
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./public:/usr/share/nginx/html:ro
+    depends_on:
+      - api1
+      - api2
+volumes:
+  pgdata:
+  redisdata:
